@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'login_screen.dart'; // ✅ Import Login screen
 
 class LogoutScreen extends StatelessWidget {
   const LogoutScreen({super.key});
@@ -14,12 +15,15 @@ class LogoutScreen extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
-            boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 10)],
+            boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 10)],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text("Logout", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text(
+                "Logout",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 10),
               const Text(
                 "Are you sure you want to logout?",
@@ -38,16 +42,31 @@ class LogoutScreen extends StatelessWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
                       onPressed: () {
-                        // TODO: Add logout logic
-                        Navigator.pop(context);
+                        // ✅ Navigate back to LoginScreen after logout
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const LoginScreen(),
+                          ),
+                          (route) => false, // Remove all previous routes
+                        );
                       },
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.black),
-                      child: const Text("Logout"),
+                      child: const Text(
+                        "Logout",
+                        style: TextStyle(color: Colors.white, fontSize: 16),
+                      ),
                     ),
                   ),
                 ],
-              )
+              ),
             ],
           ),
         ),

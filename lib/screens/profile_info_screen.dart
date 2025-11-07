@@ -9,9 +9,9 @@ class ProfileInfoScreen extends StatefulWidget {
 }
 
 class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
-  String name = "Ethan Carter";
-  String email = "ethan.carter@gmail.com";
-  String phone = "+91 9876543210";
+  String name = "";
+  String email = "";
+  String phone = "";
 
   @override
   void initState() {
@@ -22,9 +22,9 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
   Future<void> _loadProfile() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      name = prefs.getString('name') ?? name;
-      email = prefs.getString('email') ?? email;
-      phone = prefs.getString('phone') ?? phone;
+      name = prefs.getString('name') ?? "Ethan Carter";
+      email = prefs.getString('email') ?? "ethan.carter@gmail.com";
+      phone = prefs.getString('phone') ?? "+91 9876543210";
     });
   }
 
@@ -38,10 +38,10 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
         elevation: 0,
         foregroundColor: Colors.black,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      body: RefreshIndicator(
+        onRefresh: _loadProfile,
+        child: ListView(
+          padding: const EdgeInsets.all(20),
           children: [
             Center(
               child: CircleAvatar(

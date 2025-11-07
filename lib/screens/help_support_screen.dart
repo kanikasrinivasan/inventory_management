@@ -29,7 +29,7 @@ class HelpSupportScreen extends StatelessWidget {
             ),
             ListTile(
               leading: const Icon(Icons.phone, color: Colors.black),
-              title: const Text("+91 9876543210"),
+              title: const Text("+91 9524577795"),
             ),
           ],
         ),

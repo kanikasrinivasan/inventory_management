@@ -9,9 +9,9 @@ class EditProfileScreen extends StatefulWidget {
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
-  final TextEditingController nameController = TextEditingController();
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController phoneController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
 
   @override
   void initState() {
@@ -21,22 +21,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Future<void> _loadProfile() async {
     final prefs = await SharedPreferences.getInstance();
-    nameController.text = prefs.getString('name') ?? "Ethan Carter";
-    emailController.text = prefs.getString('email') ?? "ethan.carter@gmail.com";
-    phoneController.text = prefs.getString('phone') ?? "+91 9876543210";
+    _nameController.text = prefs.getString('name') ?? "Ethan Carter";
+    _emailController.text = prefs.getString('email') ?? "ethan.carter@gmail.com";
+    _phoneController.text = prefs.getString('phone') ?? "+91 9876543210";
   }
 
   Future<void> _saveProfile() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('name', nameController.text);
-    await prefs.setString('email', emailController.text);
-    await prefs.setString('phone', phoneController.text);
+    await prefs.setString('name', _nameController.text);
+    await prefs.setString('email', _emailController.text);
+    await prefs.setString('phone', _phoneController.text);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Profile updated successfully!")),
-    );
-
-    Navigator.pop(context); // go back after saving
+    Navigator.pop(context, true); // ✅ Return true to indicate success
   }
 
   @override
@@ -53,26 +49,26 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            TextFormField(
-              controller: nameController,
+            TextField(
+              controller: _nameController,
               decoration: const InputDecoration(labelText: "Full Name"),
             ),
-            const SizedBox(height: 10),
-            TextFormField(
-              controller: emailController,
+            const SizedBox(height: 15),
+            TextField(
+              controller: _emailController,
               decoration: const InputDecoration(labelText: "Email"),
             ),
-            const SizedBox(height: 10),
-            TextFormField(
-              controller: phoneController,
+            const SizedBox(height: 15),
+            TextField(
+              controller: _phoneController,
               decoration: const InputDecoration(labelText: "Phone"),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 30),
             ElevatedButton(
               onPressed: _saveProfile,
               style: ElevatedButton.styleFrom(backgroundColor: Colors.black),
-              child: const Text("Update"),
-            )
+              child: const Text("Save Changes"),
+            ),
           ],
         ),
       ),
