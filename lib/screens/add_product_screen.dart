@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'draft_screen.dart';
+import 'package:hive/hive.dart';
 
 class AddProductScreen extends StatefulWidget {
   const AddProductScreen({super.key});
@@ -15,23 +15,19 @@ class _AddProductScreenState extends State<AddProductScreen> {
   final TextEditingController costController = TextEditingController();
   final TextEditingController mrpController = TextEditingController();
   final TextEditingController notesController = TextEditingController();
+  final TextEditingController stockController = TextEditingController();
 
   String? selectedCategory;
   File? _pickedImage;
 
-  // store drafts (frontend only)
-  static final List<Map<String, dynamic>> _drafts = [];
-
   final List<String> categories = [
-    "Electronics",
-    "Clothing",
-    "Accessories",
-    "Storage",
-    "Smart Home"
+    "Electronics devices",
+    "Electronics gadgets"
   ];
 
   Future<void> _pickImage() async {
     final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+
     if (picked != null) {
       setState(() {
         _pickedImage = File(picked.path);
@@ -39,34 +35,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
     }
   }
 
-  void _saveAsDraft() {
-    final draftProduct = {
-      "name": nameController.text.isEmpty
-          ? "Unnamed Product"
-          : nameController.text,
-      "sku": DateTime.now().millisecondsSinceEpoch.toString(),
-      "category": selectedCategory ?? "Uncategorized",
-      "stock": 124,
-      "image": _pickedImage?.path,
-      "notes": notesController.text,
-      "cost": costController.text,
-      "mrp": mrpController.text,
-    };
-
-    _drafts.add(draftProduct);
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => DraftScreen(drafts: _drafts),
-      ),
-    );
-  }
-
-  void _addProduct() {
+  /// SAVE PRODUCT INTO HIVE (LOCAL STORAGE)
+  void _addProduct() async {
     if (nameController.text.isEmpty ||
         costController.text.isEmpty ||
         mrpController.text.isEmpty ||
+        stockController.text.isEmpty ||
         selectedCategory == null ||
         _pickedImage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -75,38 +49,45 @@ class _AddProductScreenState extends State<AddProductScreen> {
       return;
     }
 
-    final newProduct = {
+    final product = {
       "name": nameController.text,
       "sku": DateTime.now().millisecondsSinceEpoch.toString(),
       "category": selectedCategory!,
-      "stock": 10,
+      "stock": int.parse(stockController.text),
       "image": _pickedImage!.path,
       "notes": notesController.text,
       "cost": costController.text,
       "mrp": mrpController.text,
     };
 
-    Navigator.pop(context, newProduct);
+    final box = Hive.box('products');
+    await box.add(product);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Product added successfully!"),
+        backgroundColor: Colors.green,
+      ),
+    );
+
+    Navigator.pop(context, product);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Add Product",
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.receipt_long_outlined),
-            onPressed: () {},
-          )
-        ],
+        title: const Text(
+          "Add Product",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // IMAGE PICKER
             GestureDetector(
               onTap: _pickImage,
               child: Container(
@@ -118,7 +99,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 ),
                 child: _pickedImage == null
                     ? const Center(
-                        child: Icon(Icons.add, size: 40, color: Colors.black54),
+                        child: Icon(Icons.add_a_photo, size: 40),
                       )
                     : ClipRRect(
                         borderRadius: BorderRadius.circular(8),
@@ -131,18 +112,19 @@ class _AddProductScreenState extends State<AddProductScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            const Text("Product Details",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 4),
-            const Text("Enter the product information below",
-                style: TextStyle(color: Colors.grey, fontSize: 12)),
+
+            const Text(
+              "Product Details",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+
             const SizedBox(height: 16),
 
+            // NAME
             TextField(
               controller: nameController,
               decoration: InputDecoration(
                 labelText: "Product Name",
-                hintText: "Enter product name",
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -150,6 +132,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
             ),
             const SizedBox(height: 16),
 
+            // COST & MRP
             Row(
               children: [
                 Expanded(
@@ -158,7 +141,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
                       labelText: "Cost",
-                      prefixText: "₹",
+                      prefixText: "₹ ",
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -172,7 +155,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
                       labelText: "MRP",
-                      prefixText: "₹",
+                      prefixText: "₹ ",
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -183,19 +166,30 @@ class _AddProductScreenState extends State<AddProductScreen> {
             ),
             const SizedBox(height: 16),
 
+            // STOCK
+            TextField(
+              controller: stockController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: "Stock Quantity",
+                hintText: "e.g., 10",
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // CATEGORY
             DropdownButtonFormField<String>(
               value: selectedCategory,
               items: categories
-                  .map((cat) => DropdownMenuItem(
-                        value: cat,
-                        child: Text(cat),
-                      ))
+                  .map(
+                    (cat) => DropdownMenuItem(value: cat, child: Text(cat)),
+                  )
                   .toList(),
-              onChanged: (value) {
-                setState(() {
-                  selectedCategory = value;
-                });
-              },
+              onChanged: (value) => setState(() => selectedCategory = value),
               decoration: InputDecoration(
                 labelText: "Category",
                 border: OutlineInputBorder(
@@ -203,68 +197,36 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 ),
               ),
             ),
+
             const SizedBox(height: 16),
 
+            // NOTES
             TextField(
               controller: notesController,
               maxLines: 3,
               decoration: InputDecoration(
                 labelText: "Notes (optional)",
-                hintText: "Notes",
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
             ),
+
             const SizedBox(height: 20),
 
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30)),
-                    ),
-                    onPressed: _saveAsDraft,
-                    child: const Text("Save as Draft"),
-                  ),
+            // BUTTONS
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30)),
-                    ),
-                    onPressed: _addProduct,
-                    child: const Text("Add Product"),
-                  ),
-                ),
-              ],
-            )
+              ),
+              onPressed: _addProduct,
+              child: const Text("Save Product"),
+            ),
           ],
         ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 2,
-        selectedItemColor: Colors.black,
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard_outlined), label: "Dashboard"),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.inventory_2_outlined), label: "Products"),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.add_box_outlined), label: "Add"),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline), label: "Profile"),
-        ],
-        onTap: (index) {
-          // TODO: Navigate to respective screens
-        },
       ),
     );
   }

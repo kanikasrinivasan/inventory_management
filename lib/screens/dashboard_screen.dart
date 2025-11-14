@@ -1,14 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+
 import 'alerts_screen.dart';
-import 'product_screen.dart';
 import 'add_product_screen.dart';
-import 'profile_screen.dart'; // ✅ Import Profile Screen
+import 'profile_screen.dart';
+import 'products_screen.dart';      // ✅ IMPORTANT
+
+import '../models/product_model.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final productBox = Hive.box('products');
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -30,134 +36,149 @@ class DashboardScreen extends StatelessWidget {
         ],
       ),
 
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 🔹 Alerts Section
-            const Text(
-              "Alerts",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
+      body: ValueListenableBuilder(
+        valueListenable: productBox.listenable(),
+        builder: (context, box, _) {
+          
+          int totalProducts = box.length;
+          int lowStock = 0;
+          int outOfStock = 0;
+          int inStock = 0;
 
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.blue[50],
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+          for (int i = 0; i < box.length; i++) {
+            final data = box.getAt(i);
+            final product = ProductModel.fromMap(data);
+
+            if (product.stock == 0) {
+              outOfStock++;
+            } else if (product.stock < 5) {
+              lowStock++;
+            } else {
+              inStock++;
+            }
+          }
+
+          return Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                
+                const Text(
+                  "Alerts",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[50],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text("Low Stock",
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                      SizedBox(height: 4),
-                      Text("10 items", style: TextStyle(color: Colors.blue)),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text("Low Stock",
+                              style: TextStyle(fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 4),
+                          Text(
+                            "$lowStock items",
+                            style: const TextStyle(color: Colors.blue),
+                          ),
+                        ],
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const AlertsScreen()),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.blue,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 8),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: const Text("View"),
+                      ),
                     ],
                   ),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const AlertsScreen()),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.blue,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: const Text("View"),
-                  ),
-                ],
-              ),
-            ),
+                ),
 
-            const SizedBox(height: 20),
+                const SizedBox(height: 20),
 
-            // 🔹 Stats Section
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildStatCard("Total Products", "120"),
-                _buildStatCard("In Stock", "100"),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildStatCard("Total Products", "$totalProducts"),
+                    _buildStatCard("In Stock", "$inStock"),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildStatCard("Low Stock", "$lowStock"),
+                    _buildStatCard("Out of Stock", "$outOfStock"),
+                  ],
+                ),
+
+                const SizedBox(height: 24),
+
+                const Text(
+                  "Recent Activity",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+
+                _buildActivityTile(Icons.arrow_upward, "Restocked",
+                    "Apple airtags", "100 units", Colors.green),
+                _buildActivityTile(Icons.arrow_downward, "Adjusted",
+                    "Logitech MX keys", "50 units", Colors.orange),
               ],
             ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildStatCard("Low Stock", "10"),
-                _buildStatCard("Out of Stock", "10"),
-              ],
-            ),
-
-            const SizedBox(height: 24),
-
-            // 🔹 Recent Activity
-            const Text(
-              "Recent Activity",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-
-            _buildActivityTile(Icons.arrow_upward, "Restocked",
-                "Apple airtags", "100 units", Colors.green),
-            _buildActivityTile(Icons.arrow_downward, "Adjusted",
-                "Logitech MX keys", "50 units", Colors.orange),
-          ],
-        ),
-      ),
-
-      // 🔹 Bottom Navigation
-      bottomNavigationBar: BottomNavigationBar(
-        selectedItemColor: Colors.teal,
-        unselectedItemColor: Colors.black54,
-        showUnselectedLabels: true,
-        onTap: (index) {
-          if (index == 1) {
-            // ✅ Navigate to Products Page
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ProductsScreen()),
-            );
-          } else if (index == 2) {
-            // ✅ Navigate to Add Product Page
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const AddProductScreen()),
-            );
-          } else if (index == 3) {
-            // ✅ Navigate to Profile Page
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ProfileScreen()),
-            );
-          }
+          );
         },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Dashboard"),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.inventory_2), label: "Products"),
-          BottomNavigationBarItem(icon: Icon(Icons.add), label: "Add"),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),
-        ],
       ),
+
+      // -----------------------------------------------------
+      // ✅ FIXED BOTTOM NAVIGATION BAR
+      // -----------------------------------------------------
+      bottomNavigationBar: BottomNavigationBar(
+  currentIndex: 0,
+  selectedItemColor: Colors.teal,
+  unselectedItemColor: Colors.black54,
+  type: BottomNavigationBarType.fixed,
+  onTap: (index) {
+    if (index == 1) {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductsScreen()));
+    } else if (index == 2) {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const AddProductScreen()));
+    } else if (index == 3) {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
+    }
+  },
+  items: const [
+    BottomNavigationBarItem(icon: Icon(Icons.home), label: "Dashboard"),
+    BottomNavigationBarItem(icon: Icon(Icons.inventory_2), label: "Products"),
+    BottomNavigationBarItem(icon: Icon(Icons.add), label: "Add"),
+    BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),
+  ],
+),
+
     );
   }
 
-  // Widget for Stats
   Widget _buildStatCard(String title, String value) {
     return Expanded(
       child: Container(
@@ -181,7 +202,6 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  // Widget for Recent Activity
   Widget _buildActivityTile(
       IconData icon, String action, String product, String qty, Color color) {
     return ListTile(
